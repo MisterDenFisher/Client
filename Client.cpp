@@ -16,13 +16,26 @@ void ClearCin() {
 
 void ClientHandler() {
 	int msg_size;
+	int check;
 	while (true) {
-		recv(Connection, (char*)&msg_size, sizeof(int), NULL);
-		char* msg = new char[msg_size + 1];
-		msg[msg_size] = '\0';
-		recv(Connection, msg, msg_size, NULL);
-		cout << msg;
-		delete[] msg;
+		
+		check = recv(Connection, (char*)&msg_size, sizeof(int), NULL);
+
+		if (check > 0) {
+			char* msg = new char[msg_size + 1];
+			msg[msg_size] = '\0';
+			recv(Connection, msg, msg_size, NULL);
+
+			cout << msg;
+			delete[] msg;
+		}
+		else if (check == -1) {
+			cout << "\n!!!Соединение с сервером потеряно!!!";
+			closesocket(Connection);
+			WSACleanup();
+			exit(0);
+		}
+		else exit(0);
 	}
 }
 
@@ -30,23 +43,6 @@ int main(int argc, char* argv[]) {
 	
 	SetConsoleCP(1251);
 	SetConsoleOutputCP(1251);
-
-	/*while (true) {
-		cout << "Подключиться к серверу, чтоб начать игру? [y/n]   ";
-		char startProgram;
-		cin >> startProgram;
-		if (startProgram == 'y') {
-			break;
-		}
-		else {
-			cout << "Вы ввели NO или ошибочное выражение. Не выходить из программы? [y/n]   ";
-			ClearCin();
-			cin >> startProgram;
-			if (startProgram != 'y') {
-				return 0;
-			}
-		}
-	}*/
 
 	//WSAStartup
 	WSAData wsaData;
@@ -63,9 +59,35 @@ int main(int argc, char* argv[]) {
 	addr.sin_family = AF_INET;
 
 	Connection = socket(AF_INET, SOCK_STREAM, NULL);
-	if (connect(Connection, (SOCKADDR*)&addr, sizeof(addr)) != 0) {
-		cout << "Ошибка: не удалось подключиться к серверу.\n";
-		return 1;
+
+	//Изначальный заруск программы
+	//while (true) {
+	//	cout << "Подключиться к серверу, чтоб начать игру? [y/n]   ";
+	//	char startProgram;
+	//	cin >> startProgram;
+	//	if (startProgram == 'y') {
+	//		break;
+	//	}
+	//	else {
+	//		cout << "Вы ввели NO или ошибочное выражение. Не выходить из программы? [y/n]   ";
+	//		ClearCin();
+	//		cin >> startProgram;
+	//		if (startProgram != 'y') {
+	//			return 0;
+	//		}
+	//	}
+	//}
+	
+	//Выход из программы в случае превышение лимита ожидания
+	int timer = 0;
+	while (connect(Connection, (SOCKADDR*)&addr, sizeof(addr)) != 0) {
+		if (timer == 0) cout << "Ошибка: не удалось подключиться к серверу.\n";
+		timer += 1;
+		Sleep(500);
+		if (timer == 4) {
+			cout << "!!! К серверу так и не удалось подключиться !!!\n"; 
+			return 0;
+		}
 	}
 	cout << "Соединение с сервером установлено!\n";
 
@@ -79,6 +101,7 @@ int main(int argc, char* argv[]) {
 		send(Connection, msg1.c_str(), msg_size, NULL);
 		Sleep(10);
 	}
+
 
 	system("pause");
 	return 0;
